@@ -1,10 +1,11 @@
 package lev;
 
-import java.io.File;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
 
 public class App {
     private static String directoryPath;
@@ -21,7 +22,7 @@ public class App {
         printArgs();
 
         FileWalker fileWalker = new FileWalker(countThreads, maxDepth);
-        fileWalker.getFileTree(new File(directoryPath), 0);
+        fileWalker.processCatalog(directoryPath);
         fileWalker.getReport().print();
     }
 
