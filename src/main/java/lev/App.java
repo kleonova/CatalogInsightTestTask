@@ -19,8 +19,10 @@ public class App {
     public static void main( String[] args ) throws Exception {
         initArgs(args);
         printArgs();
+
         FileWalker fileWalker = new FileWalker(countThreads, maxDepth);
         fileWalker.getFileTree(new File(directoryPath), 0);
+        fileWalker.getReport().print();
     }
 
     private static void initArgs(String[] args) throws Exception {
