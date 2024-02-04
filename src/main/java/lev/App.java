@@ -1,6 +1,9 @@
 package lev;
 
+import java.io.BufferedReader;
+import java.io.IOException;
 import java.nio.file.Files;
+import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.*;
 
@@ -13,12 +16,26 @@ public class App {
     private static Set<String> excludeExt = Collections.emptySet();
     private static boolean useGitIgnore = false;
     private static Set<String> formatReport = Collections.emptySet();
+    private static Set<String> rulesByNameGitIgnore = new HashSet<>();
+    private static Set<String> rulesByExtGitIgnore = new HashSet<>();
 
     public static void main( String[] args ) throws Exception {
         initArgs(args);
         printArgs();
 
-        FileWalker fileWalker = new FileWalker(countThreads, maxDepth, includeExt, excludeExt);
+        if (useGitIgnore) {
+            readGitIgnoreRules();
+        }
+
+        FileWalker fileWalker = FileWalker
+                .builder()
+                .countThreads(countThreads)
+                .maxDepth(maxDepth)
+                .includeExt(includeExt)
+                .excludeExt(excludeExt)
+                .rulesByNameGitIgnore(rulesByNameGitIgnore)
+                .rulesByExtGitIgnore(rulesByExtGitIgnore)
+                .build();
         fileWalker.processCatalog(directoryPath);
         fileWalker.getReport().print();
     }
@@ -99,5 +116,26 @@ public class App {
         System.out.println("Не обрабатывать файлы с расширением: " + useExcludeExt);
         System.out.println("Не обрабатывать файлы, указанные в gitignore: " + useGitIgnore);
         System.out.println("Формат вывода: " + useFormatReport);
+    }
+
+    private static void readGitIgnoreRules() {
+        Path gitignorePath = Paths.get(directoryPath + "/.gitignore");
+
+        try (BufferedReader reader = Files.newBufferedReader(gitignorePath)) {
+            String line;
+            while ((line = reader.readLine()) != null) {
+                if (line.isEmpty() || line.startsWith("#")) {
+                    continue;
+                }
+
+                if (line.startsWith("*.")) {
+                    rulesByExtGitIgnore.add(line.replaceAll("\\*\\.", ""));
+                } else {
+                    rulesByNameGitIgnore.add(line.replaceAll("/", ""));
+                }
+            }
+        } catch (IOException e) {
+            System.err.println("Ошибка при чтении файла .gitignore: " + e.getMessage());
+        }
     }
 }

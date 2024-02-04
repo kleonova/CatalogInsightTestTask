@@ -1,5 +1,8 @@
 package lev;
 
+import lombok.Builder;
+import lombok.Data;
+
 import java.io.IOException;
 import java.nio.file.FileVisitResult;
 import java.nio.file.Files;
@@ -13,38 +16,28 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.locks.Lock;
 import java.util.concurrent.locks.ReentrantLock;
 
+@Data
+@Builder
 public class FileWalker {
     private static final int TIMEWAIT = 300; // seconds
     private Report report;
 
     private int maxDepth;
     private int countThreads;
-
     private Set<String> includeExt;
-
     private Set<String> excludeExt;
+    private Set<String> rulesByNameGitIgnore;
+    private Set<String> rulesByExtGitIgnore;
 
     private ExecutorService executor;
     private Lock lock;
 
-    public FileWalker(int countThreads, int maxDepth, Set<String> includeExt, Set<String> excludeExt) {
+    public void processCatalog(String path) throws IOException {
         report = new Report();
-        this.countThreads = countThreads;
-        this.maxDepth = maxDepth;
-        this.includeExt = includeExt;
-        this.excludeExt = excludeExt;
-    }
-
-    public void processCatalog(String path) {
         executor = Executors.newFixedThreadPool(countThreads);
         lock = new ReentrantLock();
 
-        try {
-            walk(Path.of(path));
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-
+        walk(Path.of(path));
         executor.shutdown();
 
         try {
@@ -64,9 +57,15 @@ public class FileWalker {
                 if (root.relativize(dir).getNameCount() > maxDepth && maxDepth !=0) {
                     return FileVisitResult.SKIP_SUBTREE;
                 }
+
+                if (!rulesByNameGitIgnore.isEmpty() && rulesByNameGitIgnore.contains(root.relativize(dir).toString())) {
+                    return FileVisitResult.SKIP_SUBTREE;
+                }
+
                 executor.submit(() -> {
                     processDirectory(dir);
                 });
+
                 return FileVisitResult.CONTINUE;
             }
 
@@ -75,6 +74,7 @@ public class FileWalker {
                 executor.submit(() -> {
                     processFile(file);
                 });
+
                 return FileVisitResult.CONTINUE;
             }
         });
@@ -87,38 +87,33 @@ public class FileWalker {
 
     // Обработка файла
     private void processFile(Path filePath) {
-        String extension = "";
-        String filename = "";
-        String absPath = "";
+        String filename = filePath.getFileName().toString();
+        String absPath = filePath.toString();
         long bytes = 0;
-
         try {
-            filename = filePath.getFileName().toString();
-            absPath = filePath.toString();
             bytes = Files.size(filePath);
-            extension = filename.substring(filename.lastIndexOf(".") + 1);
-        } catch (IOException exception) {
-            exception.printStackTrace();
+        } catch (IOException e) {
+            throw new RuntimeException(e);
         }
+
+        if (canProcessFile(filename)) {
+            System.out.println("Обработка файла: " + filename + ", abs " + absPath + ", size " + bytes);
+            ReportFile reportFile = new ReportFile(filename, absPath, bytes);
+
+            lock.lock();
+            report.addFile(reportFile);
+            lock.unlock();
+        }
+    }
+
+    private boolean canProcessFile(String filename) {
+        String extension = filename.substring(filename.lastIndexOf(".") + 1);
 
         boolean isProcessAsIncludeFile = includeExt.isEmpty() || includeExt.contains(extension);
         boolean isProcessAsExcludeFile = excludeExt.isEmpty() || !excludeExt.contains(extension);
-        // проверить что файл попадает под обработку gitignore
+        boolean isProcessAsExtGitIgnore = rulesByExtGitIgnore.isEmpty() || !rulesByExtGitIgnore.contains(extension);
+        boolean isProcessAsNameGitIgnore = rulesByNameGitIgnore.isEmpty() || !rulesByNameGitIgnore.contains(filename);
 
-        if (!isProcessAsIncludeFile || !isProcessAsExcludeFile) {
-            System.out.println(filename + " не обрабатывать");
-            return;
-        }
-
-        System.out.println("Обработка файла: " + filename + ", abs " + absPath + ", size " + bytes);
-        ReportFile reportFile = new ReportFile(filename, absPath, bytes);
-
-        lock.lock();
-        report.addFile(reportFile);
-        lock.unlock();
-    }
-
-    public Report getReport() {
-        return report;
+        return isProcessAsIncludeFile && isProcessAsExcludeFile && isProcessAsExtGitIgnore && isProcessAsNameGitIgnore;
     }
 }
