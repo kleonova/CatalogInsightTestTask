@@ -21,12 +21,13 @@ public class Report {
     }
 
     public void print() {
-        System.out.println("Информация о каталоге: ");
+        System.out.println("\n=== Информация о каталоге ===");
         System.out.println("Всего файлов: " + countFiles);
         System.out.println("Общий размер файлов: " + (sizeFiles / 1024) + "КБ");
         System.out.println("Всего строк: " + countAllLines);
         System.out.println("Всего пустых строк: " + countEmptyLines);
         System.out.println("Всего однострочных комментариев: " + countCommentLines);
+        System.out.println();
     }
 
     @Override

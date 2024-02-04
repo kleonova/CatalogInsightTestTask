@@ -44,6 +44,10 @@ public class App {
     }
 
     private static void initArgs(String[] args) throws Exception {
+        if (args.length == 0) {
+            throw new Exception("Аргументы не переданы");
+        }
+
         directoryPath = args[0];
         if (!Files.exists(Paths.get(directoryPath))) {
             throw new Exception("Директория не существует");
@@ -112,7 +116,7 @@ public class App {
         String useExcludeExt = excludeExt.isEmpty() ? "не заданo" : excludeExt.toString();
         String useFormatReport = formatReport.isEmpty() ? "не заданo" : formatReport.toString();
 
-        System.out.println("Параметры запуска:");
+        System.out.println("=== Параметры запуска ===");
         System.out.println("Путь: " + directoryPath);
         System.out.println("Запуск рекурсивно: " + isRecursive);
         System.out.println("Глубина обхода: " + (maxDepth == 0 ? "не задана" : maxDepth));
