@@ -1,3 +1,6 @@
 /.idea
 /CatalogInsight.iml
 /target
+/report.json
+/report.xml
+/report.txt

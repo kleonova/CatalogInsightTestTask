@@ -1,11 +1,16 @@
 package lev;
 
-import java.io.BufferedReader;
-import java.io.IOException;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.dataformat.xml.XmlMapper;
+
+import java.io.*;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.*;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.Set;
 
 public class App {
     private static String directoryPath;
@@ -16,16 +21,12 @@ public class App {
     private static Set<String> excludeExt = Collections.emptySet();
     private static boolean useGitIgnore = false;
     private static Set<String> formatReport = Collections.emptySet();
-    private static Set<String> rulesByNameGitIgnore = new HashSet<>();
-    private static Set<String> rulesByExtGitIgnore = new HashSet<>();
+    private static final Set<String> rulesByNameGitIgnore = new HashSet<>();
+    private static final Set<String> rulesByExtGitIgnore = new HashSet<>();
 
     public static void main( String[] args ) throws Exception {
         initArgs(args);
         printArgs();
-
-        if (useGitIgnore) {
-            readGitIgnoreRules();
-        }
 
         FileWalker fileWalker = FileWalker
                 .builder()
@@ -38,6 +39,8 @@ public class App {
                 .build();
         fileWalker.processCatalog(directoryPath);
         fileWalker.getReport().print();
+
+        saveReports(fileWalker.getReport());
     }
 
     private static void initArgs(String[] args) throws Exception {
@@ -81,7 +84,9 @@ public class App {
             maxDepth = 1;
         }
 
-        // если конфликт includeExt и excludeExt ?
+        if (useGitIgnore) {
+            readGitIgnoreRules();
+        }
     }
 
     private static int getNumericArg(String argument) {
@@ -136,6 +141,55 @@ public class App {
             }
         } catch (IOException e) {
             System.err.println("Ошибка при чтении файла .gitignore: " + e.getMessage());
+        }
+    }
+
+    private static void saveReports(Report report) {
+        if (formatReport.contains("json")) {
+            saveJsonFile(report);
+        }
+
+        if (formatReport.contains("xml")) {
+            saveXmlFile(report);
+        }
+
+        if (formatReport.contains("plain")) {
+            savePlainFile(report);
+        }
+    }
+
+    private static void saveJsonFile(Report report) {
+        String fileReportName = "report.json";
+        ObjectMapper mapper = new ObjectMapper();
+
+        try {
+            mapper.writeValue(new File(fileReportName), report);
+            System.out.println("Отчет сохранен в файле " + fileReportName);
+        } catch (IOException e) {
+            System.err.println("Ошибка при сохранении отчета в JSON: " + e.getMessage());
+        }
+    }
+
+    private static void savePlainFile(Report report) {
+        String fileReportName = "report.txt";
+
+        try (BufferedWriter writer = new BufferedWriter(new FileWriter(fileReportName))) {
+            writer.write(report.toString());
+            System.out.println("Отчет сохранен в файле " + fileReportName);
+        } catch (IOException e) {
+            System.err.println("Ошибка при сохранении отчета в текстовый файл: " + e.getMessage());
+        }
+    }
+
+    private static void saveXmlFile(Report report) {
+        String fileReportName = "report.xml";
+        XmlMapper mapper = new XmlMapper();
+
+        try {
+            mapper.writeValue(new File(fileReportName), report);
+            System.out.println("Отчет сохранен в файле " + fileReportName);
+        } catch (IOException e) {
+            System.err.println("Ошибка при сохранении отчета в XML: " + e.getMessage());
         }
     }
 }

@@ -1,22 +1,16 @@
 package lev;
 
 import lombok.Data;
-
-import java.util.ArrayList;
-import java.util.List;
+import lombok.NoArgsConstructor;
 
 @Data
+@NoArgsConstructor
 public class Report {
     private int countFiles;
     private long sizeFiles; //byte
     private int countAllLines;
     private int countEmptyLines;
     private int countCommentLines;
-    private List<ReportFile> fileList;
-
-    public Report() {
-        fileList = new ArrayList<>();
-    }
 
     public void addFile(ReportFile reportFile) {
         countFiles++;
@@ -24,8 +18,6 @@ public class Report {
         countAllLines += reportFile.getCountAllLines();
         countEmptyLines += reportFile.getCountEmptyLines();
         countCommentLines += reportFile.getCountCommentLines();
-
-        fileList.add(reportFile);
     }
 
     public void print() {
@@ -35,5 +27,17 @@ public class Report {
         System.out.println("Всего строк: " + countAllLines);
         System.out.println("Всего пустых строк: " + countEmptyLines);
         System.out.println("Всего однострочных комментариев: " + countCommentLines);
+    }
+
+    @Override
+    public String toString() {
+        return String.format("""
+                        countFiles=%d
+                        sizeFiles=%d
+                        countAllLines=%d
+                        countEmptyLines=%d
+                        countCommentLines=%d
+                        """,
+                countFiles, sizeFiles, countAllLines, countEmptyLines, countCommentLines);
     }
 }
