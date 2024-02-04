@@ -62,10 +62,6 @@ public class FileWalker {
                     return FileVisitResult.SKIP_SUBTREE;
                 }
 
-                executor.submit(() -> {
-                    processDirectory(dir);
-                });
-
                 return FileVisitResult.CONTINUE;
             }
 
@@ -80,25 +76,12 @@ public class FileWalker {
         });
     }
 
-    // Обработка директории
-    private void processDirectory(Path dir) {
-        System.out.println("Обработка директории: " + dir);
-    }
-
     // Обработка файла
     private void processFile(Path filePath) {
         String filename = filePath.getFileName().toString();
-        String absPath = filePath.toString();
-        long bytes = 0;
-        try {
-            bytes = Files.size(filePath);
-        } catch (IOException e) {
-            throw new RuntimeException(e);
-        }
 
         if (canProcessFile(filename)) {
-            System.out.println("Обработка файла: " + filename + ", abs " + absPath + ", size " + bytes);
-            ReportFile reportFile = new ReportFile(filename, absPath, bytes);
+            ReportFile reportFile = new ReportFile(filePath);
 
             lock.lock();
             report.addFile(reportFile);
